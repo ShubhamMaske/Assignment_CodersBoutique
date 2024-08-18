@@ -16,7 +16,7 @@ export const signUp = async (req, res) => {
         const {error} = resgisterSchema.validate(req.body)
 
         if(error){
-            res.status(401).json({ message: error.message });
+            return res.status(401).json({ message: error.message });
         }
 
         try {
@@ -51,7 +51,7 @@ export const login = async (req, res) => {
         const {error} = loginSchema.validate(req.body)
 
         if(error){
-            res.status(401).json({ message: error.message });
+            return res.status(401).json({ message: error.message });
         }
 
         // check user is authorize or not
@@ -59,14 +59,14 @@ export const login = async (req, res) => {
             const { email, password } = req.body
             const user = await User.findOne({ where: { email } });
             if(!user) {
-                res.status(400).json({ message: 'Invalid credentials' });
+                return res.status(400).json({ message: 'Invalid credentials' });
             }
 
             // validating the password
             const validPassword = await bcrypt.compare(password, user.password)
 
             if(!validPassword) {
-                res.status(400).json({ message: 'Invalid credentials' });
+                return res.status(400).json({ message: 'Invalid credentials' });
             }
 
             const access_token = JwtService.sign({ userId: user.id, role: user.role})
@@ -75,7 +75,7 @@ export const login = async (req, res) => {
 
             user.refresh_token = refresh_token
             user.refreshTokenExpiry = refreshTokenExpiry; 
-            user.save()
+            await user.save()
 
             res.json({access_token, refresh_token, user : {id: user.id, name: user.name}})
 
@@ -140,4 +140,22 @@ export const resetPassword = async (req, res) => {
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
+};
+
+export const generateAccessToken = async (req, res) => {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) { 
+        return res.sendStatus(401); // No refresh token provided
+    }
+
+    const user = await JwtService.verify(refresh_token, process.env.JWT_REFRESH_SECRET)
+    if(!user) {
+      return res.sendStatus(403);
+    }
+
+    // Generate new access token
+    const newAccessToken = JwtService.sign({ userId: user.id, role: user.role});
+    res.json({ access_token: newAccessToken });
+
 };

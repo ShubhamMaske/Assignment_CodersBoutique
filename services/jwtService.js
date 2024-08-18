@@ -8,10 +8,6 @@ class JwtService {
     static verify(token, secret = process.env.JWT_SECRET){
         return jwt.verify(token, secret)
     }
-
-    static verifyRefreshToken(token, secret = process.env.JWT_REFRESH_SECRET){
-        return jwt.verify(token, secret)
-    }
 }
 
 export default JwtService
